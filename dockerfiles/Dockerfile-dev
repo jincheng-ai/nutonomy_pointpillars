@@ -1,0 +1,8 @@
+FROM pointpillars:env-onnx-pytorch1.8.0-cuda11.1-cudnn8-devel
+
+COPY nutonomy_pointpillars/ ./second.pytorch
+ENV PYTHONPATH=/root/second.pytorch
+
+VOLUME ["/root/data"]
+VOLUME ["/root/model"]
+WORKDIR /root/second.pytorch/second

@@ -1,0 +1,61 @@
+FROM pytorch/pytorch:1.8.0-cuda11.1-cudnn8-devel
+RUN APT_INSTALL="apt-get install -y --no-install-recommends" && \
+    PIP_INSTALL="python -m pip --no-cache-dir install --upgrade" && \
+    GIT_CLONE="git clone --depth 10" && \
+    rm -rf /var/lib/apt/lists/* \
+           /etc/apt/sources.list.d/cuda.list \
+           /etc/apt/sources.list.d/nvidia-ml.list && \
+    apt-get update && \
+# ==================================================================
+# tools
+# ------------------------------------------------------------------
+    DEBIAN_FRONTEND=noninteractive $APT_INSTALL \
+        build-essential \
+        ca-certificates \
+        # cmake \
+        wget \
+        git \
+        # vim \
+        # fish \
+        libsparsehash-dev 
+        # && \
+
+RUN ldconfig && \
+    apt-get clean && \
+    apt-get autoremove && \
+    rm -rf /var/lib/apt/lists/* /tmp/* ~/*
+
+WORKDIR /root
+COPY thirds/boost_1_68_0.tar.gz ./
+RUN ls
+
+RUN tar xzvf boost_1_68_0.tar.gz
+RUN cp -r ./boost_1_68_0/boost /usr/include
+RUN rm -rf ./boost_1_68_0
+RUN rm -rf ./boost_1_68_0.tar.gz
+
+COPY thirds/cmake-3.13.0.tar.gz ./
+RUN tar xzvf cmake-3.13.0.tar.gz
+RUN cd cmake-3.13.0 && ./bootstrap --prefix=/usr/ && make -j4 && make install 
+RUN cd /root && rm -rf cmake-3.13.0 && rm -rf cmake-3.13.0.tar.gz 
+
+RUN pip install --upgrade pip
+RUN PIP_INSTALL="python -m pip --no-cache-dir install --upgrade" && \
+    $PIP_INSTALL \
+    fire \
+    "numpy>=1.20.0,<1.22.0" \
+    "pillow>=8.3.2" \
+    scikit-image \
+    numba
+
+# use spconv version v1.1
+COPY thirds/spconv ./spconv
+RUN cd ./spconv && python setup.py bdist_wheel && cd ./dist && pip install spconv-1.1-cp38-cp38-linux_x86_64.whl
+RUN cd /root && rm -rf spconv
+
+ENV NUMBAPRO_CUDA_DRIVER=/usr/lib/x86_64-linux-gnu/libcuda.so
+ENV NUMBAPRO_NVVM=/usr/local/cuda/nvvm/lib64/libnvvm.so
+ENV NUMBAPRO_LIBDEVICE=/usr/local/cuda/nvvm/libdevice
+
+# 
+# ENTRYPOINT ["fish"]
